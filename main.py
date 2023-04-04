@@ -11,29 +11,44 @@ client = Client(account_sid, auth_token)
 from_number = "whatsapp:" + os.environ["FROM_PHONE_NUMBER"]
 to_number = "whatsapp:" + os.environ["TO_PHONE_NUMBER"]
 
+# Imgur API credentials
+client_id = os.environ["IMGUR_CLIENT_ID"]
+headers = {"Authorization": f"Client-ID {client_id}"}
 
-def send_random_image():
-  # Set up the URL to fetch a random image
-  endpoint = "https://source.unsplash.com/random"
 
-  # Fetch a random image
-  response = requests.get(endpoint)
+def get_top_image_url():
+    # Get the top images from Imgur in the last day
+    response = requests.get(
+        "https://api.imgur.com/3/gallery/t/funny/time/1",
+        headers=headers,
+    )
+    items = response.json()["data"]["items"]
 
-  # Verify that the content type is supported (JPEG, PNG, or GIF)
-  if response.headers['Content-Type'] in [
-      "image/jpeg", "image/png", "image/gif"
-  ]:
-    # Send the image to the Whatsapp bot
-    if response.status_code == 200:
-      message = client.messages.create(media_url=response.url,
-                                       from_=from_number,
-                                       to=to_number)
-      print("Image sent!")
+    # Find the first image post
+    for item in items:
+        if item["is_album"]:
+            continue
+        return item["link"]
+    return None
+
+
+def send_image(image_url):
+    if image_url:
+        # Send the image to the Whatsapp bot
+        message = client.messages.create(
+            media_url=image_url,
+            from_=from_number,
+            to=to_number,
+        )
+        print("Image sent!")
     else:
-      print("Failed to fetch image.")
-  else:
-    print(f"Unsupported image format: {response.headers['Content-Type']}")
+        print("Failed to fetch image.")
 
 
-send_random_image()
-print("Test")
+def main():
+    top_image_url = get_top_image_url()
+    send_image(top_image_url)
+
+
+if __name__ == "__main__":
+    main()
