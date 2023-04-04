@@ -1,6 +1,10 @@
 import os
 import requests
 from twilio.rest import Client
+import schedule
+import time
+from datetime import datetime
+from pytz import timezone
 
 # Set up the Twilio client
 account_sid = os.environ["TWILIO_ACCOUNT_SID"]
@@ -45,10 +49,25 @@ def send_image(image_url):
         print("Failed to fetch image.")
 
 
-def main():
+def job():
     top_image_url = get_top_image_url()
     send_image(top_image_url)
+    print("Test")
+
+
+def run_at_time(h, m, tz):
+    local_timezone = timezone(tz)
+    now = datetime.now(local_timezone)
+    target_time = now.replace(hour=h, minute=m, second=0, microsecond=0)
+    if now > target_time:
+        target_time += timedelta(days=1)
+    delay = (target_time - now).total_seconds()
+    time.sleep(delay)
+    job()
 
 
 if __name__ == "__main__":
-    main()
+    schedule.every().day.at("10:30:00").do(run_at_time, 10, 30, "CET")
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
